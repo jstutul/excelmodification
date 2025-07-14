@@ -151,7 +151,7 @@
                         
                         if ((j === 1 || j === 5) && typeof value === 'number') {
                             value = formatExcelDate(value); // convert Excel serial to string date
-                        }else if((j=== 3 || j=== 6) && value !==''){
+                        }else if((j=== 3 || j=== 6) && typeof value === 'number'){
                             console.log(typeof value);
                             value = parseInt(value); 
                         }
