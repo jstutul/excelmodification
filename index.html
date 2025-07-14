@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>Excel Upload and Edit</title>
     <style>
-        body, html {
+        body,
+        html {
             margin: 0;
             padding: 0;
             font-family: Arial, sans-serif;
@@ -41,21 +43,28 @@
             margin-top: 15px;
         }
 
-        table, th, td {
+        table,
+        th,
+        td {
             border: 1px solid #ccc;
+            text-align: center;
         }
 
-        th, td {
+        th,
+        td {
             padding: 8px;
         }
 
         input[type="text"] {
             width: 100%;
             box-sizing: border-box;
+            text-align: center;
         }
 
         .button-bar {
             margin-bottom: 10px;
+            border: 2px solid #2c3e50;
+            padding: 8px 10px;
         }
 
         .removeRowBtn {
@@ -70,8 +79,24 @@
         .removeRowBtn:hover {
             background-color: #c0392b;
         }
+
+        thead {
+            background-color: #2c3e50;
+            color: #fff;
+        }
+
+        button {
+            height: 30px;
+            width: auto;
+            background-color: #2c3e50;
+            color: #fff;
+            border: none;
+            border-radius: 15px;
+            padding: 8px 10px;
+        }
     </style>
 </head>
+
 <body>
     <header>
         📁 Excel Upload & Edit Table — <strong>Probashi Palli</strong>
@@ -109,7 +134,7 @@
 
             const day = String(date_info.getDate()).padStart(2, '0');
             const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                                "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
             const month = monthNames[date_info.getMonth()];
             const year = String(date_info.getFullYear()).slice(-2); // get last 2 digits
 
@@ -120,43 +145,54 @@
         $('#excelFile').on('change', function (e) {
             const file = e.target.files[0];
             const reader = new FileReader();
-
             reader.onload = function (e) {
                 const data = new Uint8Array(e.target.result);
                 const workbook = XLSX.read(data, { type: 'array' });
-                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                if (workbook.SheetNames.indexOf('Sheet3') == -1) {
+                    alert("Sheet 3 Not Found.");
+                    return;
+                }
+                const sheet = workbook.Sheets[workbook.SheetNames[workbook.SheetNames.indexOf('Sheet3')]];
                 const json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-
+                if (json.length == 0) {
+                    alert("No Data Found in Sheet No 3.");
+                    return;
+                }
                 generateTable(json);
+
             };
 
             reader.readAsArrayBuffer(file);
         });
 
         // Generate Editable Table
-        function generateTable(data) {
+        function generateTable(response) {
+            var data = response.filter(obj => {
+                let firstKey = Object.keys(obj)[0];
+                let firstValue = obj[firstKey];
+                return (firstValue !== "" && firstValue !== null) && Object.keys(obj).length === 9;
+            });
+            console.log(data);
             let html = '<table><thead><tr>';
             data[0].forEach(header => {
                 html += `<th>${header}</th>`;
             });
             html += `<th>Action</th>`; // Add Action column
             html += '</tr></thead><tbody>';
-            
+
 
             for (let i = 1; i < data.length; i++) {
-                if(data[i].length==9){
-                        html += '<tr>';
-                    for (let j = 0; j < data[i].length; j++) {
-                        let value = data[i][j] || '';
-                        
-                        if ((j === 1 || j === 5) && typeof value === 'number') {
-                            value = formatExcelDate(value); // convert Excel serial to string date
-                        }
-                        html += `<td><input type="text" value="${value}"></td>`;
+                html += '<tr>';
+                for (let j = 0; j < data[i].length; j++) {
+                    let value = data[i][j] || '';
+
+                    if ((j === 1 || j === 5) && typeof value === 'number') {
+                        value = formatExcelDate(value); // convert Excel serial to string date
                     }
-                    html += `<td><button class="removeRowBtn">Remove</button></td>`;
-                    html += '</tr>';
+                    html += `<td><input type="text" value="${value}"></td>`;
                 }
+                html += `<td><button class="removeRowBtn">Remove</button></td>`;
+                html += '</tr>';
             }
 
             html += '</tbody></table>';
@@ -183,39 +219,39 @@
         }
 
         // Export to Excel
-       $('#exportExcel').click(function () {
+        $('#exportExcel').click(function () {
             const rawData = tableToArray().map(row => row.slice(0, -1)); // Remove Action column
+            const ws = XLSX.utils.aoa_to_sheet(rawData);
 
-            const formattedData = rawData.map((row, rowIndex) => {
-                if (rowIndex === 0) return row; // Keep header
-                row[2] = parseInt(row[2]) || 0; // Column 3
-                row[5] = parseInt(row[5]) || 0; // Column 6
-                return row;
-            });
+            for (let r = 1; r < rawData.length; ++r) {
+                for (let c = 0; c < rawData[r].length; ++c) {
+                    const cellAddress = XLSX.utils.encode_cell({ r, c });
+                    const value = rawData[r][c];
 
-            const ws = XLSX.utils.aoa_to_sheet(formattedData);
-
-            // ✅ Force number format for columns 3 and 6
-            for (let r = 1; r < formattedData.length; ++r) {
-                const valC = formattedData[r][3];
-                const valF = formattedData[r][6];
-
-                const cellC = XLSX.utils.encode_cell({ r, c: 3 }); // C = column index 2
-                const cellF = XLSX.utils.encode_cell({ r, c: 6 }); // F = column index 5
-
-                ws[cellC] = { t: 'n', v: valC, z: '0' };     // number, no decimals
-                ws[cellF] = { t: 'n', v: valF, z: '0' };
+                    // Column 3 and 6: integer format
+                    if (c === 3 || c === 6) {
+                        ws[cellAddress] = { t: 'n', v: parseInt(value) || 0, z: '0' };
+                    }
+                    // Column 8: decimal format with 2 digits
+                    else if (c === 8) {
+                        ws[cellAddress] = { t: 'n', v: parseFloat(value) || 0.0, z: '0.00' };
+                    }
+                    // // All other columns: treat as text
+                    // else {
+                    //     ws[cellAddress] = { t: 's', v: String(value) };
+                    // }
+                }
             }
 
             const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
-            XLSX.writeFile(wb, 'ExportedData.xlsx');
+            XLSX.utils.book_append_sheet(wb, ws, 'Sheet3');
+            XLSX.writeFile(wb, `${rawData[1][0] || 'Export'}.xlsx`);
         });
 
 
 
         // Export to PDF
-       $('#exportPDF').click(function () {
+        $('#exportPDF').click(function () {
             const data = tableToArray();
             const headers = data[0].slice(0, -1); // remove last column (header)
             const body = data.slice(1).map(row => row.slice(0, -1)); // remove last column (each row)
@@ -232,4 +268,5 @@
         });
     </script>
 </body>
+
 </html>
