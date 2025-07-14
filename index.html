@@ -184,33 +184,34 @@
 
         // Export to Excel
        $('#exportExcel').click(function () {
-    const rawData = tableToArray().map(row => row.slice(0, -1)); // remove Action column
+            const rawData = tableToArray().map(row => row.slice(0, -1)); // Remove Action column
 
-    const formattedData = rawData.map((row, rowIndex) => {
-        if (rowIndex === 0) return row; // Keep header row
+            const formattedData = rawData.map((row, rowIndex) => {
+                if (rowIndex === 0) return row; // Keep header
+                row[2] = parseInt(row[2]) || 0; // Column 3
+                row[5] = parseInt(row[5]) || 0; // Column 6
+                return row;
+            });
 
-        // Convert 3rd and 6th column (index 2 and 5) to integers
-        row[2] = parseInt(row[2]) || 0;
-        row[5] = parseInt(row[5]) || 0;
-        return row;
-    });
+            const ws = XLSX.utils.aoa_to_sheet(formattedData);
 
-    const ws = XLSX.utils.aoa_to_sheet(formattedData);
+            // ✅ Force number format for columns 3 and 6
+            for (let r = 1; r < formattedData.length; ++r) {
+                const valC = formattedData[r][2];
+                const valF = formattedData[r][5];
 
-    // Force cell type to number for col C (index 2) and col F (index 5)
-    for (let R = 1; R < formattedData.length; ++R) {
-        const row = formattedData[R];
-        const cellC = XLSX.utils.encode_cell({ r: R, c: 2 }); // column 3
-        const cellF = XLSX.utils.encode_cell({ r: R, c: 5 }); // column 6
+                const cellC = XLSX.utils.encode_cell({ r, c: 2 }); // C = column index 2
+                const cellF = XLSX.utils.encode_cell({ r, c: 5 }); // F = column index 5
 
-        ws[cellC] = { t: 'n', v: row[2] }; // number cell
-        ws[cellF] = { t: 'n', v: row[5] };
-    }
+                ws[cellC] = { t: 'n', v: valC, z: '0' };     // number, no decimals
+                ws[cellF] = { t: 'n', v: valF, z: '0' };
+            }
 
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
-    XLSX.writeFile(wb, 'ExportedData.xlsx');
-});
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+            XLSX.writeFile(wb, 'ExportedData.xlsx');
+        });
+
 
 
         // Export to PDF
