@@ -186,7 +186,7 @@
         $('#exportExcel').click(function () {
             const data = tableToArray().map(row => row.slice(0, -1)); // remove last column
 
-            const formattedData = rawData.map((row, rowIndex) => {
+            const formattedData = data.map((row, rowIndex) => {
                 if (rowIndex === 0) return row; // skip header row
 
                 // Convert 3rd and 6th column to integers (index 2 and 5)
