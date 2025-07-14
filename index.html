@@ -183,25 +183,35 @@
         }
 
         // Export to Excel
-        $('#exportExcel').click(function () {
-            const data = tableToArray().map(row => row.slice(0, -1)); // remove last column
+       $('#exportExcel').click(function () {
+    const rawData = tableToArray().map(row => row.slice(0, -1)); // remove Action column
 
-            const formattedData = data.map((row, rowIndex) => {
-                if (rowIndex === 0) return row; // skip header row
+    const formattedData = rawData.map((row, rowIndex) => {
+        if (rowIndex === 0) return row; // Keep header row
 
-                // Convert 3rd and 6th column to integers (index 2 and 5)
-                if (row[2]) row[2] = parseInt(row[2]) || 0;
-                if (row[5]) row[5] = parseInt(row[5]) || 0;
+        // Convert 3rd and 6th column (index 2 and 5) to integers
+        row[2] = parseInt(row[2]) || 0;
+        row[5] = parseInt(row[5]) || 0;
+        return row;
+    });
 
-                return row;
-            });
+    const ws = XLSX.utils.aoa_to_sheet(formattedData);
 
+    // Force cell type to number for col C (index 2) and col F (index 5)
+    for (let R = 1; R < formattedData.length; ++R) {
+        const row = formattedData[R];
+        const cellC = XLSX.utils.encode_cell({ r: R, c: 2 }); // column 3
+        const cellF = XLSX.utils.encode_cell({ r: R, c: 5 }); // column 6
 
-            const worksheet = XLSX.utils.aoa_to_sheet(formattedData);
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
-            XLSX.writeFile(workbook, 'ExportedData.xlsx');
-        });
+        ws[cellC] = { t: 'n', v: row[2] }; // number cell
+        ws[cellF] = { t: 'n', v: row[5] };
+    }
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+    XLSX.writeFile(wb, 'ExportedData.xlsx');
+});
+
 
         // Export to PDF
        $('#exportPDF').click(function () {
