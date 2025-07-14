@@ -151,9 +151,6 @@
                         
                         if ((j === 1 || j === 5) && typeof value === 'number') {
                             value = formatExcelDate(value); // convert Excel serial to string date
-                        }else if((j=== 3 || j=== 6) && typeof value === 'number'){
-                            console.log(typeof value);
-                            value = parseInt(value); 
                         }
                         html += `<td><input type="text" value="${value}"></td>`;
                     }
@@ -188,7 +185,19 @@
         // Export to Excel
         $('#exportExcel').click(function () {
             const data = tableToArray().map(row => row.slice(0, -1)); // remove last column
-            const worksheet = XLSX.utils.aoa_to_sheet(data);
+
+            const formattedData = rawData.map((row, rowIndex) => {
+                if (rowIndex === 0) return row; // skip header row
+
+                // Convert 3rd and 6th column to integers (index 2 and 5)
+                if (row[2]) row[2] = parseInt(row[2]) || 0;
+                if (row[5]) row[5] = parseInt(row[5]) || 0;
+
+                return row;
+            });
+
+
+            const worksheet = XLSX.utils.aoa_to_sheet(formattedData);
             const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
             XLSX.writeFile(workbook, 'ExportedData.xlsx');
