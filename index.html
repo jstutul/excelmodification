@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Excel Upload, Edit, Export</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 30px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        table, th, td {
+            border: 1px solid #ccc;
+        }
+
+        th, td {
+            padding: 8px;
+            text-align: left;
+        }
+
+        input[type="file"], button {
+            margin: 10px 5px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Excel Upload & Edit Table</h2>
+
+    <input type="file" id="excelFile" accept=".xlsx, .xls" />
+    <button id="exportExcel">Export to Excel</button>
+    <button id="exportPDF">Export to PDF</button>
+
+    <div id="tableContainer"></div>
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <!-- SheetJS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <!-- jsPDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+
+    <script>
+        function formatExcelDate(serial) {
+            const utc_days = Math.floor(serial - 25569);
+            const utc_value = utc_days * 86400; // seconds
+            const date_info = new Date(utc_value * 1000); // milliseconds
+
+            const day = String(date_info.getDate()).padStart(2, '0');
+            const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                                "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            const month = monthNames[date_info.getMonth()];
+            const year = String(date_info.getFullYear()).slice(-2); // get last 2 digits
+
+            return `${day}/${month}/${year}`; // e.g. 21/Jul/20
+        }
+
+        // Handle Excel Upload
+        $('#excelFile').on('change', function (e) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+
+            reader.onload = function (e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+                generateTable(json);
+            };
+
+            reader.readAsArrayBuffer(file);
+        });
+
+        // Generate Editable Table
+        function generateTable(data) {
+            let html = '<table><thead><tr>';
+            data[0].forEach(header => {
+                html += `<th>${header}</th>`;
+            });
+            html += `<th>Action</th>`; // Add Action column
+            html += '</tr></thead><tbody>';
+            
+
+            for (let i = 1; i < data.length; i++) {
+                if(data[i].length==9){
+                        html += '<tr>';
+                    for (let j = 0; j < data[i].length; j++) {
+                        let value = data[i][j] || '';
+                        if ((j === 1 || j === 5) && typeof value === 'number') {
+                            value = formatExcelDate(value); // convert Excel serial to string date
+                        }
+                        html += `<td><input type="text" value="${value}"></td>`;
+                    }
+                    html += `<td><button class="removeRowBtn">Remove</button></td>`;
+                    html += '</tr>';
+                }
+            }
+
+            html += '</tbody></table>';
+            $('#tableContainer').html(html);
+        }
+
+        // Convert table to JSON array
+        function tableToArray() {
+            const table = $('table');
+            const rows = [];
+            table.find('tr').each(function () {
+                const row = [];
+                $(this).find('th, td').each(function () {
+                    const input = $(this).find('input');
+                    if (input.length) {
+                        row.push(input.val());
+                    } else {
+                        row.push($(this).text());
+                    }
+                });
+                rows.push(row);
+            });
+            return rows;
+        }
+
+        // Export to Excel
+        $('#exportExcel').click(function () {
+            const data = tableToArray().map(row => row.slice(0, -1)); // remove last column
+            const worksheet = XLSX.utils.aoa_to_sheet(data);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
+            XLSX.writeFile(workbook, 'ExportedData.xlsx');
+        });
+
+        // Export to PDF
+       $('#exportPDF').click(function () {
+            const data = tableToArray();
+            const headers = data[0].slice(0, -1); // remove last column (header)
+            const body = data.slice(1).map(row => row.slice(0, -1)); // remove last column (each row)
+
+            const doc = new jspdf.jsPDF();
+            doc.autoTable({
+                head: [headers],
+                body: body
+            });
+            doc.save('ExportedData.pdf');
+        });
+        $(document).on('click', '.removeRowBtn', function () {
+            $(this).closest('tr').remove();
+        });
+    </script>
+</body>
+</html>
