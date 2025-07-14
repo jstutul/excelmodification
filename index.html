@@ -221,31 +221,30 @@
         // Export to Excel
         $('#exportExcel').click(function () {
             const rawData = tableToArray().map(row => row.slice(0, -1)); // Remove Action column
+            // const formattedData = rawData.map((row, rowIndex) => {
+            //     if (rowIndex === 0) return row;
+            //     row[3] = parseInt(row[3]) || '';
+            //     row[6] = parseInt(row[6]) || '';
+            //     return row;
+            // });
+
             const ws = XLSX.utils.aoa_to_sheet(rawData);
 
+            // ✅ Force number format for columns 3 and 6
             for (let r = 1; r < rawData.length; ++r) {
-                for (let c = 0; c < rawData[r].length; ++c) {
-                    const cellAddress = XLSX.utils.encode_cell({ r, c });
-                    const value = rawData[r][c];
+                const valC = rawData[r][3];
+                const valF = rawData[r][6];
 
-                    // Column 3 and 6: integer format
-                    if (c === 3 || c === 6) {
-                        ws[cellAddress] = { t: 'n', v: parseInt(value) || 0, z: '0' };
-                    }
-                    // Column 8: decimal format with 2 digits
-                    else if (c === 8) {
-                        ws[cellAddress] = { t: 'n', v: parseFloat(value) || 0.0, z: '0.00' };
-                    }
-                    // All other columns: treat as text
-                    // else {
-                    //     ws[cellAddress] = { t: 's', v: String(value) };
-                    // }
-                }
+                const cellC = XLSX.utils.encode_cell({ r, c: 3 }); // C = column index 2
+                const cellF = XLSX.utils.encode_cell({ r, c: 6 }); // F = column index 5
+
+                ws[cellC] = { t: 'n', v: valC, z: '0' };     // number, no decimals
+                ws[cellF] = { t: 'n', v: valF, z: '0' };
             }
 
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, 'Sheet3');
-            XLSX.writeFile(wb, `${rawData[1][0] || 'Export'}.xlsx`);
+            XLSX.writeFile(wb, `${rawData[1][0]}.xlsx`);
         });
 
 
