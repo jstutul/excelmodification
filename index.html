@@ -197,11 +197,11 @@
 
             // ✅ Force number format for columns 3 and 6
             for (let r = 1; r < formattedData.length; ++r) {
-                const valC = formattedData[r][2];
-                const valF = formattedData[r][5];
+                const valC = formattedData[r][3];
+                const valF = formattedData[r][6];
 
-                const cellC = XLSX.utils.encode_cell({ r, c: 2 }); // C = column index 2
-                const cellF = XLSX.utils.encode_cell({ r, c: 5 }); // F = column index 5
+                const cellC = XLSX.utils.encode_cell({ r, c: 3 }); // C = column index 2
+                const cellF = XLSX.utils.encode_cell({ r, c: 6 }); // F = column index 5
 
                 ws[cellC] = { t: 'n', v: valC, z: '0' };     // number, no decimals
                 ws[cellF] = { t: 'n', v: valF, z: '0' };
