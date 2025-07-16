@@ -256,6 +256,7 @@
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, 'Sheet3');
             XLSX.writeFile(wb, `${rawData[1][0]}.xlsx`);
+            window.location.reload();
         });
 
 
