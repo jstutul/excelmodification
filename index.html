@@ -195,7 +195,6 @@
                 let firstValue = obj[firstKey];
                 return (firstValue !== "" && firstValue !== null) && Object.keys(obj).length === 9;
             });
-            console.log(data);
             let html = '<table><thead><tr>';
             data[0].forEach(header => {
                 html += `<th>${header}</th>`;
@@ -223,7 +222,7 @@
 
             html += '</tbody></table>';
             $('#tableContainer').html(html);
-            $("#txtTotal").html(total.toFixed(2));
+            calculateTotalAmount();
         }
 
         // Convert table to JSON array
