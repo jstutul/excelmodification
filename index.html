@@ -95,7 +95,8 @@
             border-radius: 15px;
             padding: 8px 10px;
         }
-        .hd{
+
+        .hd {
             position: absolute;
             right: 15px;
             top: -15px;
@@ -172,6 +173,21 @@
             reader.readAsArrayBuffer(file);
         });
 
+        function calculateTotalAmount() {
+            var data = $("#tableContainer tbody tr");
+            var total = 0.00;
+
+            $.each(data, function () {
+                var amount = parseFloat($(this).find("td:eq(8) input").val());
+                if (!isNaN(amount)) {
+                    total += amount;
+                }
+            });
+
+            $("#txtTotal").html(total.toFixed(2));
+        }
+
+
         // Generate Editable Table
         function generateTable(response) {
             var data = response.filter(obj => {
@@ -187,7 +203,7 @@
             html += `<th>Action</th>`; // Add Action column
             html += '</tr></thead><tbody>';
 
-            var total=0.00;    
+            var total = 0.00;
             for (let i = 1; i < data.length; i++) {
                 html += '<tr>';
                 for (let j = 0; j < data[i].length; j++) {
@@ -196,8 +212,8 @@
                     if ((j === 1 || j === 5) && typeof value === 'number') {
                         value = formatExcelDate(value); // convert Excel serial to string date
                     }
-                    if(j===8){
-                        total+=parseFloat(value);
+                    if (j === 8) {
+                        total += parseFloat(value);
                     }
                     html += `<td><input type="text" value="${value}"></td>`;
                 }
@@ -276,8 +292,9 @@
         });
         $(document).on('click', '.removeRowBtn', function () {
             if (confirm("Do you want to delete?")) {
-               $(this).closest('tr').remove();
-            }      
+                $(this).closest('tr').remove();
+                calculateTotalAmount();
+            }
         });
     </script>
 </body>
