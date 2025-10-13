@@ -13,24 +13,21 @@
     <header>
         <a href="./index.html" style="font-size:24px;color: #fff;"><i class="fa fa-home"></i></a> Excel Formating Tools — <strong>Probashi Palli</strong>
     </header>
-
     <main>
-        <div class="d-flex gap-4 justify-content-center">
-            <div class="single" onclick="window.location.href='collection.html'">
-                <div class="card bg-success p-4">
-                    <div class="card-body">
-                        <h2 class="text-light">Collection Excel</h2>
-                    </div>
-                </div>
+        <div class="button-bar d-flex justify-content-between">
+            <div class="cl">
+                <input class="form-control w-100" type="file" id="excelFile" accept=".xlsx, .xls" />
             </div>
-            <div class="single" onclick="window.location.href='cheque.html'">
-                <div class="card bg-info p-4">
-                    <div class="card-body">
-                        <h2 class="text-light">Cheque Excel</h2>
-                    </div>
-                </div>
+            <div class="cl">
+                <button class="btn btn-success" id="exportExcel">Export to Excel</button>
+                <button class="btn btn-primary" id="exportPDF">Export to PDF</button>
+            </div>
+            <div class="cl">
+                <h1 class="hd">Total : <span id="txtTotal">0.00</span></h1>
             </div>
         </div>
+
+        <div id="tableContainer"></div>
     </main>
 
     <footer>

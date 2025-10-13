@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Excel Upload and Edit</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+    /* Floating buttons */
+    .float-btn {
+      position: fixed;
+      right: 20px;
+      width: 45px;
+      height: 45px;
+      border-radius: 50%;
+      border: none;
+      color: white;
+      background-color: #28a745;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+      cursor: pointer;
+      font-size: 20px;
+      transition: all 0.3s ease;
+      z-index: 999;
+    }
+
+    .float-btn:hover {
+      transform: scale(1.1);
+    }
+
+    /* Positions */
+    #scrollTopBtn {
+      bottom: 80px;
+    }
+
+    #scrollBottomBtn {
+      bottom: 20px;
+    }
+  </style>
+</head>
+
+<body>
+    <header>
+        <a href="./index.html" style="font-size:24px;color: #fff;"><i class="fa fa-home"></i></a> Excel Formating Tools — <strong>Probashi Palli</strong>
+    </header>
+
+
+    <main class="container">
+        <div class="button-bar d-flex justify-content-between">
+            <div class="cl">
+                <input class="form-control w-100" type="file" id="excelFile" accept=".xlsx, .xls" />
+            </div>
+            <div class="cl">
+                <button class="btn btn-success" id="exportExcel">Export to Excel</button>
+                <button class="btn btn-primary" id="exportPDF">Export to PDF</button>
+            </div>
+        </div>
+
+        <div id="tableContainer"></div>
+        <button id="scrollTopBtn" class="float-btn">↑</button>
+        <button id="scrollBottomBtn" class="float-btn">↓</button>
+    </main>
+
+    <footer>
+        &copy; 2025 Your Website Name — All rights reserved | Powered by <a href="#" style="color: #f1c40f;">jsTutul</a>
+    </footer>
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <!-- SheetJS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <!-- jsPDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+
+    <script>
+        $('#scrollTopBtn').on('click', function() {
+      $('html, body').animate({ scrollTop: 0 }, 600);
+    });
+
+    // Scroll to Bottom
+    $('#scrollBottomBtn').on('click', function() {
+      $('html, body').animate({ scrollTop: $(document).height() }, 600);
+    });
+
+    // Show/hide Top button when scrolling
+    $(window).on('scroll', function() {
+      if ($(this).scrollTop() > 200) {
+        $('#scrollTopBtn').fadeIn();
+      } else {
+        $('#scrollTopBtn').fadeOut();
+      }
+    });
+    function convertToFormattedDate(value) {
+        if (typeof value !== 'string' || !value.trim()) return value;
+
+        let date;
+
+        // 🔹 Try format: "17-10-2011" or "17/10/2011"
+        if (/^\d{1,2}[-\/]\d{1,2}[-\/]\d{4}$/.test(value.trim())) {
+            const [day, month, year] = value.split(/[-\/]/).map(Number);
+            date = new Date(year, month - 1, day);
+        }
+        // 🔹 Try format: "9-Nov-2013" or "09-Nov-2013"
+        else if (/^\d{1,2}[-\/][A-Za-z]{3}[-\/]\d{4}$/.test(value.trim())) {
+            date = new Date(value);
+        }
+        // 🔹 Try letting JS parse other formats
+        else {
+            const tryDate = new Date(value);
+            if (!isNaN(tryDate)) date = tryDate;
+        }
+
+        // 🔹 Return original if invalid
+        if (!(date instanceof Date) || isNaN(date)) return value;
+
+        // ✅ Format as "dd MMM yyyy"
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = date.toLocaleString('en-US', { month: 'short' });
+        const year = date.getFullYear();
+
+        return `${day} ${month} ${year}`;
+    }
+
+    // Initially hide the top button
+    $('#scrollTopBtn').hide();
+
+        // Handle Excel Upload
+    $('#excelFile').on('change', function (e) {
+        const file = e.target.files[0];
+        const reader = new FileReader();
+        
+        reader.onload = function (e) {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array',cellDates: true });
+            const firstSheetName = workbook.SheetNames[0];
+            const sheet = workbook.Sheets[firstSheetName];
+            const json = XLSX.utils.sheet_to_json(sheet, { header: 1 , raw:false });
+            if (json.length == 0) {
+                alert("No Data Found in Sheet No 3.");
+                return;
+            }
+            generateTable(json);
+        };
+        reader.readAsArrayBuffer(file);
+    });
+
+
+        // Generate Editable Table
+    function generateTable(data) {
+        let html = '<table><thead><tr>';
+        html += `<th>SL</th>`;
+        html += `<th>Mr No</th>`;
+        html += `<th>Cheque No</th>`;
+        html += `<th>Realization Date</th>`;
+        html += `<th>Bank</th>`;
+        html += `<th>Action</th>`;
+        html += '</tr></thead><tbody>';
+        
+        console.log(data)
+        var total = 0.00;
+        for (let i = 1; i < data.length; i++) {
+            if(data[i].length>5){
+                console.log(typeof(data[i][12]));
+                html += '<tr>';
+                    html += `<td>${i}</td>`;
+                    html += `<td><input type="text" value="${data[i][6]}"></td>`;
+                    html += `<td><input type="text" value="${data[i][7]}"></td>`;
+                    html += `<td><input type="text" value="${convertToFormattedDate(data[i][12])}"></td>`;
+                    html += `<td><input type="text" value="${data[i][13]}"></td>`;
+                    html += `<td><button class="removeRowBtn">Remove</button></td>`;
+                html += '</tr>';
+            }
+        }
+        html += '</tbody></table>';
+        $('#tableContainer').html(html);
+    }
+
+    // Convert table to JSON array
+    function tableToArray() {
+        const table = $('table');
+        const rows = [];
+        table.find('tr').each(function () {
+            const row = [];
+            $(this).find('th, td').each(function () {
+                const input = $(this).find('input');
+                if (input.length) {
+                    row.push(input.val());
+                } else {
+                    row.push($(this).text());
+                }
+            });
+            rows.push(row);
+        });
+        return rows;
+    }
+
+    // Export to Excel
+    $('#exportExcel').click(function () {
+        const rawData = tableToArray().map(row => row.slice(0, -1)); // Remove Action column
+        const ws = XLSX.utils.aoa_to_sheet(rawData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Sheet3');
+        XLSX.writeFile(wb, `cheque_clear.xlsx`);
+        window.location.reload();
+    });
+
+
+
+    // Export to PDF
+    $('#exportPDF').click(function () {
+        const data = tableToArray();
+        const headers = data[0].slice(0, -1); // remove last column (header)
+        const body = data.slice(1).map(row => row.slice(0, -1)); // remove last column (each row)
+        const doc = new jspdf.jsPDF();
+        doc.autoTable({
+            head: [headers],
+            body: body
+        });
+        doc.save('ChequeClear.pdf');
+    });
+    $(document).on('click', '.removeRowBtn', function () {
+        if (confirm("Do you want to delete?")) {
+            $(this).closest('tr').remove();
+        }
+    });
+    </script>
+</body>
+
+</html>
