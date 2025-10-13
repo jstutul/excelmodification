@@ -96,19 +96,32 @@
     });
     function convertToFormattedDate(value) {
         if (typeof value !== 'string' || !value.trim()) return value;
-
+        value = value.trim();
         let date;
 
-        // 🔹 Try format: "17-10-2011" or "17/10/2011"
-        if (/^\d{1,2}[-\/]\d{1,2}[-\/]\d{4}$/.test(value.trim())) {
-            const [day, month, year] = value.split(/[-\/]/).map(Number);
+        // 🔹 Case 1: "17-10-2011", "17/10/2011", "20-04-20"
+        if (/^\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4}$/.test(value)) {
+            let [day, month, year] = value.split(/[-\/]/).map(Number);
+
+            // Handle 2-digit years (20 → 2020, 99 → 1999)
+            if (year < 100) {
+                year += (year < 50 ? 2000 : 1900);
+            }
+
             date = new Date(year, month - 1, day);
         }
-        // 🔹 Try format: "9-Nov-2013" or "09-Nov-2013"
-        else if (/^\d{1,2}[-\/][A-Za-z]{3}[-\/]\d{4}$/.test(value.trim())) {
+        // 🔹 Case 2: "9-Nov-2013" or "09-Nov-2013"
+        else if (/^\d{1,2}[-\/][A-Za-z]{3}[-\/]\d{2,4}$/.test(value)) {
             date = new Date(value);
+            // If year is 2-digit, fix it
+            if (date.getFullYear() < 100) {
+                const [day, mon, yr] = value.split(/[-\/]/);
+                let year = parseInt(yr);
+                year += (year < 50 ? 2000 : 1900);
+                date = new Date(`${day}-${mon}-${year}`);
+            }
         }
-        // 🔹 Try letting JS parse other formats
+        // 🔹 Case 3: Let JS handle ISO-like strings
         else {
             const tryDate = new Date(value);
             if (!isNaN(tryDate)) date = tryDate;
@@ -124,6 +137,7 @@
 
         return `${day} ${month} ${year}`;
     }
+
 
     // Initially hide the top button
     $('#scrollTopBtn').hide();
