@@ -56,6 +56,7 @@
                 <button class="btn btn-primary" id="exportPDF">Export to PDF</button>
             </div>
         </div>
+        <h3 class="text-danger">Total Error : <span id="txtTotal">0</span></h3>
 
         <div id="tableContainer"></div>
         <button id="scrollTopBtn" class="float-btn">↑</button>
@@ -78,170 +79,175 @@
 
     <script>
         $('#scrollTopBtn').on('click', function() {
-      $('html, body').animate({ scrollTop: 0 }, 600);
-    });
+            $('html, body').animate({ scrollTop: 0 }, 600);
+        });
 
-    // Scroll to Bottom
-    $('#scrollBottomBtn').on('click', function() {
-      $('html, body').animate({ scrollTop: $(document).height() }, 600);
-    });
+        // Scroll to Bottom
+        $('#scrollBottomBtn').on('click', function() {
+            $('html, body').animate({ scrollTop: $(document).height() }, 600);
+        });
 
-    // Show/hide Top button when scrolling
-    $(window).on('scroll', function() {
-      if ($(this).scrollTop() > 200) {
-        $('#scrollTopBtn').fadeIn();
-      } else {
-        $('#scrollTopBtn').fadeOut();
-      }
-    });
-    function convertToFormattedDate(value) {
-        if (typeof value !== 'string' || !value.trim()) return value;
-        value = value.trim();
-        let date;
+        // Show/hide Top button when scrolling
+        $(window).on('scroll', function() {
+            if ($(this).scrollTop() > 200) {
+                $('#scrollTopBtn').fadeIn();
+            } else {
+                $('#scrollTopBtn').fadeOut();
+            }
+        });
+        let invalidDateCount = 0; 
+        function convertToFormattedDate(value) {
+            if (typeof value !== 'string' || !value.trim()) return value;
+            value = value.trim();
+            let date;
 
-        // 🔹 Case 1: "17-10-2011", "17/10/2011", "20-04-20"
-        if (/^\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4}$/.test(value)) {
-            let [day, month, year] = value.split(/[-\/]/).map(Number);
+            // 🔹 Case 1: "17-10-2011", "17/10/2011", "20-04-20"
+            if (/^\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4}$/.test(value)) {
+                let [day, month, year] = value.split(/[-\/]/).map(Number);
 
-            // Handle 2-digit years (20 → 2020, 99 → 1999)
-            if (year < 100) {
-                year += (year < 50 ? 2000 : 1900);
+                // Handle 2-digit years (20 → 2020, 99 → 1999)
+                if (year < 100) {
+                    year += (year < 50 ? 2000 : 1900);
+                }
+
+                date = new Date(year, month - 1, day);
+            }
+            // 🔹 Case 2: "9-Nov-2013" or "09-Nov-2013"
+            else if (/^\d{1,2}[-\/][A-Za-z]{3}[-\/]\d{2,4}$/.test(value)) {
+                date = new Date(value);
+                // If year is 2-digit, fix it
+                if (date.getFullYear() < 100) {
+                    const [day, mon, yr] = value.split(/[-\/]/);
+                    let year = parseInt(yr);
+                    year += (year < 50 ? 2000 : 1900);
+                    date = new Date(`${day}-${mon}-${year}`);
+                }
+            }
+            // 🔹 Case 3: Let JS handle ISO-like strings
+            else {
+                const tryDate = new Date(value);
+                if (!isNaN(tryDate)) date = tryDate;
             }
 
-            date = new Date(year, month - 1, day);
-        }
-        // 🔹 Case 2: "9-Nov-2013" or "09-Nov-2013"
-        else if (/^\d{1,2}[-\/][A-Za-z]{3}[-\/]\d{2,4}$/.test(value)) {
-            date = new Date(value);
-            // If year is 2-digit, fix it
-            if (date.getFullYear() < 100) {
-                const [day, mon, yr] = value.split(/[-\/]/);
-                let year = parseInt(yr);
-                year += (year < 50 ? 2000 : 1900);
-                date = new Date(`${day}-${mon}-${year}`);
+            // 🔹 Return original if invalid
+            if (!(date instanceof Date) || isNaN(date)) {
+                invalidDateCount++;
+                return { formatted: value, valid: false }; // ❌ invalid
             }
+
+            // ✅ Format as "dd MMM yyyy"
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = date.toLocaleString('en-US', { month: 'short' });
+            const year = date.getFullYear();
+
+            return { formatted: `${day} ${month} ${year}`, valid: true };
         }
-        // 🔹 Case 3: Let JS handle ISO-like strings
-        else {
-            const tryDate = new Date(value);
-            if (!isNaN(tryDate)) date = tryDate;
-        }
-
-        // 🔹 Return original if invalid
-        if (!(date instanceof Date) || isNaN(date)) return value;
-
-        // ✅ Format as "dd MMM yyyy"
-        const day = String(date.getDate()).padStart(2, '0');
-        const month = date.toLocaleString('en-US', { month: 'short' });
-        const year = date.getFullYear();
-
-        return `${day} ${month} ${year}`;
-    }
 
 
-    // Initially hide the top button
-    $('#scrollTopBtn').hide();
+        // Initially hide the top button
+        $('#scrollTopBtn').hide();
 
         // Handle Excel Upload
-    $('#excelFile').on('change', function (e) {
-        const file = e.target.files[0];
-        const reader = new FileReader();
-        
-        reader.onload = function (e) {
-            const data = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, { type: 'array',cellDates: true });
-            const firstSheetName = workbook.SheetNames[0];
-            const sheet = workbook.Sheets[firstSheetName];
-            const json = XLSX.utils.sheet_to_json(sheet, { header: 1 , raw:false });
-            if (json.length == 0) {
-                alert("No Data Found in Sheet No 3.");
-                return;
-            }
-            generateTable(json);
-        };
-        reader.readAsArrayBuffer(file);
-    });
+        $('#excelFile').on('change', function (e) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            
+            reader.onload = function (e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array',cellDates: true });
+                const firstSheetName = workbook.SheetNames[0];
+                const sheet = workbook.Sheets[firstSheetName];
+                const json = XLSX.utils.sheet_to_json(sheet, { header: 1 , raw:false });
+                if (json.length == 0) {
+                    alert("No Data Found in Sheet No 3.");
+                    return;
+                }
+                generateTable(json);
+            };
+            reader.readAsArrayBuffer(file);
+        });
 
 
         // Generate Editable Table
-    function generateTable(data) {
-        let html = '<table><thead><tr>';
-        html += `<th>SL</th>`;
-        html += `<th>Mr No</th>`;
-        html += `<th>Cheque No</th>`;
-        html += `<th>Realization Date</th>`;
-        html += `<th>Bank</th>`;
-        html += `<th>Action</th>`;
-        html += '</tr></thead><tbody>';
-        
-        console.log(data)
-        var total = 0.00;
-        for (let i = 1; i < data.length; i++) {
-            if(data[i].length>5){
-                console.log(typeof(data[i][12]));
-                html += '<tr>';
-                    html += `<td>${i}</td>`;
-                    html += `<td><input type="text" value="${data[i][6]}"></td>`;
-                    html += `<td><input type="text" value="${data[i][7]}"></td>`;
-                    html += `<td><input type="text" value="${convertToFormattedDate(data[i][12])}"></td>`;
-                    html += `<td><input type="text" value="${data[i][13]}"></td>`;
-                    html += `<td><button class="removeRowBtn">Remove</button></td>`;
-                html += '</tr>';
-            }
-        }
-        html += '</tbody></table>';
-        $('#tableContainer').html(html);
-    }
-
-    // Convert table to JSON array
-    function tableToArray() {
-        const table = $('table');
-        const rows = [];
-        table.find('tr').each(function () {
-            const row = [];
-            $(this).find('th, td').each(function () {
-                const input = $(this).find('input');
-                if (input.length) {
-                    row.push(input.val());
-                } else {
-                    row.push($(this).text());
+        function generateTable(data) {
+            let html = '<table><thead><tr>';
+            html += `<th>SL</th>`;
+            html += `<th>Mr No</th>`;
+            html += `<th>Cheque No</th>`;
+            html += `<th>Realization Date</th>`;
+            html += `<th>Bank</th>`;
+            html += `<th>Action</th>`;
+            html += '</tr></thead><tbody>';
+            
+            console.log(data)
+            var total = 0.00;
+            for (let i = 1; i < data.length; i++) {
+                if(data[i].length>5){
+                    const dateResult = convertToFormattedDate(data[i][12]);
+                    const dateStyle = dateResult.valid ? '' : 'style="background-color:#f8d7da; color:#b71c1c;"';
+                    html += '<tr>';
+                        html += `<td>${i}</td>`;
+                        html += `<td><input type="text" value="${data[i][6]}"></td>`;
+                        html += `<td><input type="text" value="${data[i][7]}"></td>`;
+                        html += `<td><input type="text" ${dateStyle} value="${dateResult.formatted}"></td>`;
+                        html += `<td><input type="text" value="${data[i][13]}"></td>`;
+                        html += `<td><button class="removeRowBtn">Remove</button></td>`;
+                    html += '</tr>';
                 }
-            });
-            rows.push(row);
-        });
-        return rows;
-    }
-
-    // Export to Excel
-    $('#exportExcel').click(function () {
-        const rawData = tableToArray().map(row => row.slice(0, -1)); // Remove Action column
-        const ws = XLSX.utils.aoa_to_sheet(rawData);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'Sheet3');
-        XLSX.writeFile(wb, `cheque_clear.xlsx`);
-        window.location.reload();
-    });
-
-
-
-    // Export to PDF
-    $('#exportPDF').click(function () {
-        const data = tableToArray();
-        const headers = data[0].slice(0, -1); // remove last column (header)
-        const body = data.slice(1).map(row => row.slice(0, -1)); // remove last column (each row)
-        const doc = new jspdf.jsPDF();
-        doc.autoTable({
-            head: [headers],
-            body: body
-        });
-        doc.save('ChequeClear.pdf');
-    });
-    $(document).on('click', '.removeRowBtn', function () {
-        if (confirm("Do you want to delete?")) {
-            $(this).closest('tr').remove();
+            }
+            html += '</tbody></table>';
+            $('#tableContainer').html(html);
+            $("#txtTotal").html(invalidDateCount)
         }
-    });
+
+        // Convert table to JSON array
+        function tableToArray() {
+            const table = $('table');
+            const rows = [];
+            table.find('tr').each(function () {
+                const row = [];
+                $(this).find('th, td').each(function () {
+                    const input = $(this).find('input');
+                    if (input.length) {
+                        row.push(input.val());
+                    } else {
+                        row.push($(this).text());
+                    }
+                });
+                rows.push(row);
+            });
+            return rows;
+        }
+
+        // Export to Excel
+        $('#exportExcel').click(function () {
+            const rawData = tableToArray().map(row => row.slice(1, -1)); // Remove Action column
+            const ws = XLSX.utils.aoa_to_sheet(rawData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Sheet3');
+            XLSX.writeFile(wb, `cheque_clear.xlsx`);
+            window.location.reload();
+        });
+
+
+
+        // Export to PDF
+        $('#exportPDF').click(function () {
+            const data = tableToArray();
+            const headers = data[0].slice(0, -1); // remove last column (header)
+            const body = data.slice(1).map(row => row.slice(0, -1)); // remove last column (each row)
+            const doc = new jspdf.jsPDF();
+            doc.autoTable({
+                head: [headers],
+                body: body
+            });
+            doc.save('ChequeClear.pdf');
+        });
+        $(document).on('click', '.removeRowBtn', function () {
+            if (confirm("Do you want to delete?")) {
+                $(this).closest('tr').remove();
+            }
+        });
     </script>
 </body>
-
 </html>
