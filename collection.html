@@ -117,14 +117,19 @@
                 html += '<tr>';
                 for (let j = 0; j < data[i].length; j++) {
                     let value = data[i][j] || '';
-
+                    let rls =''
+                    if(data[i][3]===2){
+                        if(data[i][4]=="" || data[i][5]=="" || data[i][6]==""){
+                            rls ='background-color:#f8d7da; color:#b71c1c'
+                        }
+                    }
                     if ((j === 1 || j === 5) && typeof value === 'number') {
                         value = formatExcelDate(value); // convert Excel serial to string date
                     }
                     if (j === 8) {
                         total += parseFloat(value);
                     }
-                    html += `<td><input type="text" value="${value}"></td>`;
+                    html += `<td><input type="text" style="${rls}" value="${value}"></td>`;
                 }
                 html += `<td><button class="removeRowBtn">Remove</button></td>`;
                 html += '</tr>';
