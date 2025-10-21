@@ -221,7 +221,13 @@
 
         // Export to Excel
         $('#exportExcel').click(function () {
-            const rawData = tableToArray().map(row => row.slice(1, -1)); // Remove Action column
+            const rawData = tableToArray().map((row, index) => {
+                if (index === 0) {
+                    return row.slice(1, -1).map(col => col.replace(/\s+/g, '')); 
+                }
+                return row.slice(1, -1);
+            });
+
             const ws = XLSX.utils.aoa_to_sheet(rawData);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, 'Sheet3');
